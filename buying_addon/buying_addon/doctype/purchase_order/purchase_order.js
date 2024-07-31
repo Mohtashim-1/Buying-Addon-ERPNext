@@ -4,7 +4,7 @@ frappe.ui.form.on('Purchase Order', {
 })
 // run through client script 
 frappe.ui.form.on("Purchase Order Item", {
-	last_purchase_rates:function(frm,cdt,cdn){
+	custom_last_purchase_rates:function(frm,cdt,cdn){
 		var row = locals[cdt][cdn]
 		frm.call({
             method: 'buying_addon.buying_addon.doctype.purchase_order.purchase_order.get_last_purchase_details_custom',
