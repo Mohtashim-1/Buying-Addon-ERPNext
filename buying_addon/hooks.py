@@ -115,6 +115,12 @@ doctype_js = {"Purchase Order" : "buying_addon/doctype/purchase_order/purchase_o
 # ---------------
 # Override standard doctype classes
 
+
+override_doctype_class = {
+    "Purchase Receipt": "buying_addon.overrides.purchase_receipt.CustomPurchaseReceipt",
+    "Purchase Invoice": "buying_addon.overrides.purchase_invoice.CustomPurchaseInvoice",
+}
+
 # override_doctype_class = {
 # 	"ToDo": "custom_app.overrides.CustomToDo"
 # }
