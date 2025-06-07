@@ -19,7 +19,7 @@ def get_last_purchase_details_custom(item_code=None):
 		""", (item_code,), as_dict=1)
 
 		if result:
-			base_url = get_url()  # dynamically gets http://yourdomain.com
+			base_url = get_url()  
 			table = """<table style="border: 1px solid black; border-collapse: collapse; width: 100%;">
 				<tr>
 					<th style="border: 1px solid black;">Date</th>
