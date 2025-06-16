@@ -139,3 +139,17 @@ function increase_qty(frm,cdt,cdn){
 		d.qty = Math.round(new_qty)
 	}
 }
+
+// frappe.ui.form.on("Purchase Order", {
+//     onload: function(frm) {
+// 		frappe.msgprint("onload")
+//         frm.fields_dict.items.grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
+//             return {
+//                 query: "erpnext.controllers.queries.item_query"
+//             };
+//         };
+//         frm.fields_dict.items.grid.get_field('item_code').get_formatter = function(value, doc) {
+//             return value;
+//         };
+//     }
+// });
