@@ -1,21 +1,64 @@
 frappe.ui.form.on('Material Request', {
 	refresh(frm) {
-		// Removed custom button for Request Dashboard
-		// Dashboard will load automatically below
+		// Only load dashboard if document is saved and not being edited
+		if (frm.doc.name && !frm.doc.__islocal && !frm.is_dirty()) {
+			// Add a small delay to ensure form is fully loaded
+			setTimeout(() => {
+				frm.trigger("load_mr_status_dashboard");
+			}, 200);
+		}
+		
+		// Add manual refresh button for dashboard
 		if (frm.doc.name && !frm.doc.__islocal) {
-			frm.trigger("load_mr_status_dashboard");
+			frm.add_custom_button(__('Refresh Dashboard'), function() {
+				frm.trigger("load_mr_status_dashboard");
+			}, __('Custom'));
 		}
 	},
 	
 	onload(frm) {
-		// Load dashboard data when form loads
+		// Load dashboard data when form loads, but only for saved documents
 		if (frm.doc.name && !frm.doc.__islocal) {
-			frm.trigger("load_mr_status_dashboard");
+			// Add a small delay to ensure form is fully loaded
+			setTimeout(() => {
+				frm.trigger("load_mr_status_dashboard");
+			}, 100);
 		}
 	},
 	
 	load_mr_status_dashboard: function(frm) {
-		// Show loading spinner
+		// Don't load dashboard if form is dirty (has unsaved changes)
+		if (frm.is_dirty()) {
+			console.log("Dashboard loading skipped - form has unsaved changes");
+			return;
+		}
+		
+		// Don't load if already loading
+		if (frm.dashboard_loading) {
+			return;
+		}
+		
+		// Don't load if form is in a transitional state (saving, submitting, etc.)
+		if (frm.saving || frm.submitting) {
+			console.log("Dashboard loading skipped - form is in transitional state");
+			return;
+		}
+		
+		// Don't load if form is being validated
+		if (frm.validating) {
+			console.log("Dashboard loading skipped - form is being validated");
+			return;
+		}
+		
+		// Don't load if dashboard is disabled
+		if (frm.dashboard_disabled) {
+			console.log("Dashboard loading skipped - dashboard is disabled");
+			return;
+		}
+		
+		frm.dashboard_loading = true;
+		
+		// Show loading spinner without affecting form state
 		if (frm.fields_dict.custom_report_status) {
 			const wrapper = $(frm.fields_dict.custom_report_status.wrapper);
 			$(wrapper).empty();
@@ -33,10 +76,27 @@ frappe.ui.form.on('Material Request', {
 			`);
 		}
 		
-		frm.call({
+		// Use a completely isolated call to avoid any form state interference
+		const original_dirty_state = frm.is_dirty();
+		const original_unsaved_flag = frm.doc.__unsaved;
+		
+		frappe.call({
 			method: 'buying_addon.buying_addon.doctype.material_request.material_request.get_material_request_status_dashboard',
 			args: { material_request_name: frm.doc.name },
 			callback: function(r) {
+				frm.dashboard_loading = false;
+				
+				// Ensure form dirty state is preserved exactly as it was
+				if (original_dirty_state !== frm.is_dirty()) {
+					console.log("Dashboard loading affected form dirty state - restoring");
+					frm.doc.__unsaved = original_unsaved_flag;
+					if (original_dirty_state) {
+						frm.$wrapper.addClass("dirty").removeClass("clean");
+					} else {
+						frm.$wrapper.removeClass("dirty").addClass("clean");
+					}
+				}
+				
 				if (r.message) {
 					frm.events.render_mr_status_dashboard(frm, r.message);
 				} else {
@@ -49,7 +109,20 @@ frappe.ui.form.on('Material Request', {
 				}
 			},
 			error: function(r) {
+				frm.dashboard_loading = false;
 				console.error('Error loading dashboard data:', r);
+				
+				// Ensure form dirty state is preserved exactly as it was
+				if (original_dirty_state !== frm.is_dirty()) {
+					console.log("Dashboard loading affected form dirty state - restoring");
+					frm.doc.__unsaved = original_unsaved_flag;
+					if (original_dirty_state) {
+						frm.$wrapper.addClass("dirty").removeClass("clean");
+					} else {
+						frm.$wrapper.removeClass("dirty").addClass("clean");
+					}
+				}
+				
 				// Show error message in the field if available
 				if (frm.fields_dict.custom_report_status) {
 					const wrapper = $(frm.fields_dict.custom_report_status.wrapper);
@@ -72,12 +145,64 @@ frappe.ui.form.on('Material Request', {
 		}
 	},
 	
-	// Reload dashboard when items are updated
-	items: function(frm) {
-		if (frm.doc.name && !frm.doc.__islocal) {
-			setTimeout(() => {
-				frm.trigger("load_mr_status_dashboard");
-			}, 1000);
+	// Remove automatic dashboard reload on items change to prevent interference
+	// items: function(frm) {
+	// 	// This was causing the dirty state issue - removed
+	// },
+	
+	// Add save events to prevent dashboard interference
+	before_save: function(frm) {
+		// Set flag to prevent dashboard loading during save
+		frm.saving = true;
+		frm.dashboard_disabled = true;
+		
+		// Clear any pending dashboard reloads
+		if (frm.dashboard_reload_timeout) {
+			clearTimeout(frm.dashboard_reload_timeout);
+			frm.dashboard_reload_timeout = null;
+		}
+	},
+	
+	after_save: function(frm) {
+		// Clear saving flag
+		frm.saving = false;
+		
+		// Re-enable dashboard after a delay
+		setTimeout(() => {
+			frm.dashboard_disabled = false;
+		}, 500);
+		
+		// Reload dashboard after successful save with a longer delay
+		setTimeout(() => {
+			frm.trigger("load_mr_status_dashboard");
+		}, 1000);
+	},
+	
+	// Add validation to prevent dashboard interference
+	validate: function(frm) {
+		// Set validating flag
+		frm.validating = true;
+		frm.dashboard_disabled = true;
+		
+		// Clear any pending dashboard reloads during validation
+		if (frm.dashboard_reload_timeout) {
+			clearTimeout(frm.dashboard_reload_timeout);
+			frm.dashboard_reload_timeout = null;
+		}
+		
+		// Clear validating flag after a short delay
+		setTimeout(() => {
+			frm.validating = false;
+			frm.dashboard_disabled = false;
+		}, 100);
+	},
+	
+	// Add field change handler to prevent dashboard interference
+	field_change: function(frm, fieldname, value) {
+		// Clear any pending dashboard reloads when fields change
+		if (frm.dashboard_reload_timeout) {
+			clearTimeout(frm.dashboard_reload_timeout);
+			frm.dashboard_reload_timeout = null;
 		}
 	}
 });
@@ -96,6 +221,7 @@ function create_mr_status_dashboard_html(data) {
 				<div style="text-align: right;">
 					<div style="font-size: 20px; font-weight: bold; color: ${data.status_info.status_color};">${data.status_info.status}</div>
 					<div style="color: #666; font-size: 12px;">${data.status_info.message}</div>
+					<button onclick="cur_frm.trigger('load_mr_status_dashboard')" style="margin-top: 10px; padding: 5px 10px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🔄 Refresh</button>
 				</div>
 			</div>
 
