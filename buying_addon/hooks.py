@@ -31,6 +31,7 @@ app_license = "mit"
 doctype_js = {
     "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order.js",
     "Material Request" : "buying_addon/doctype/material_request/material_request.js",
+    "Sales Order" : "buying_addon/doctype/sales_order/sales_order.js",
 }
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
