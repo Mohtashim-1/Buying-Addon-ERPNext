@@ -80,9 +80,17 @@ frappe.ui.form.on('Material Request', {
 		const original_dirty_state = frm.is_dirty();
 		const original_unsaved_flag = frm.doc.__unsaved;
 		
+		// Initialize pagination state
+		if (!frm.mr_dashboard_page_size) {
+			frm.mr_dashboard_page_size = 50;
+		}
+		if (!frm.mr_dashboard_page) {
+			frm.mr_dashboard_page = 1;
+		}
+
 		frappe.call({
 			method: 'buying_addon.buying_addon.doctype.material_request.material_request.get_material_request_status_dashboard',
-			args: { material_request_name: frm.doc.name },
+			args: { material_request_name: frm.doc.name, page: frm.mr_dashboard_page, page_size: frm.mr_dashboard_page_size },
 			callback: function(r) {
 				frm.dashboard_loading = false;
 				
@@ -204,6 +212,19 @@ frappe.ui.form.on('Material Request', {
 			clearTimeout(frm.dashboard_reload_timeout);
 			frm.dashboard_reload_timeout = null;
 		}
+	},
+
+	change_mr_dashboard_page: function(frm, new_page) {
+		if (!new_page || new_page < 1) return;
+		frm.mr_dashboard_page = new_page;
+		frm.trigger('load_mr_status_dashboard');
+	},
+
+	change_mr_dashboard_page_size: function(frm, new_size) {
+		const size = parseInt(new_size, 10) || 50;
+		frm.mr_dashboard_page_size = size;
+		frm.mr_dashboard_page = 1;
+		frm.trigger('load_mr_status_dashboard');
 	}
 });
 
@@ -314,6 +335,21 @@ function create_mr_status_dashboard_html(data) {
 			<!-- Items Breakdown Table -->
 			<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Items Breakdown</h4>
+				<div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px;">
+					<div style="font-size:12px; color:#666;">${(data.pagination.total_items||0) > 0 ? `Showing <b>${data.pagination.start_index + 1}</b> - <b>${data.pagination.end_index}</b> of <b>${data.pagination.total_items}</b>` : 'No items'}</div>
+					<div style="display:flex; gap:6px; align-items:center;">
+						<button onclick="cur_frm.events.change_mr_dashboard_page(cur_frm, 1)" style="padding:4px 8px;">⏮</button>
+						<button onclick="cur_frm.events.change_mr_dashboard_page(cur_frm, Math.max(1, (cur_frm.mr_dashboard_page||1)-1))" style="padding:4px 8px;">◀</button>
+						<span style="font-size:12px;">Page <b>${data.pagination.page}</b> / ${data.pagination.total_pages}</span>
+						<button onclick="cur_frm.events.change_mr_dashboard_page(cur_frm, Math.min(${data.pagination.total_pages}, (cur_frm.mr_dashboard_page||1)+1))" style="padding:4px 8px;">▶</button>
+						<button onclick="cur_frm.events.change_mr_dashboard_page(cur_frm, ${data.pagination.total_pages})" style="padding:4px 8px;">⏭</button>
+						<select onchange="cur_frm.events.change_mr_dashboard_page_size(cur_frm, this.value)" style="margin-left:8px;">
+							<option value="25" ${data.pagination.page_size==25?'selected':''}>25</option>
+							<option value="50" ${data.pagination.page_size==50?'selected':''}>50</option>
+							<option value="100" ${data.pagination.page_size==100?'selected':''}>100</option>
+						</select>
+					</div>
+				</div>
 				<div style="overflow-x: auto;">
 					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
 						<thead>

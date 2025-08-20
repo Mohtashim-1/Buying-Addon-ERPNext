@@ -264,34 +264,86 @@ function create_order_status_dashboard_html(data) {
 				</div>
 			</div>
 
-			<!-- KPI Cards -->
-			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+			<!-- Main KPI Cards -->
+			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
 				<div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-					<div style="font-size: 24px; font-weight: bold; color: #1976d2;">${data.total_ordered}</div>
-					<div style="color: #666; font-size: 12px;">Total Ordered</div>
+					<div style="font-size: 22px; font-weight: bold; color: #1976d2;">${data.total_ordered}</div>
+					<div style="color: #666; font-size: 11px;">Total Ordered</div>
 				</div>
 				<div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-					<div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${data.total_delivered}</div>
-					<div style="color: #666; font-size: 12px;">Total Delivered</div>
+					<div style="font-size: 22px; font-weight: bold; color: #2e7d32;">${data.total_delivered}</div>
+					<div style="color: #666; font-size: 11px;">Total Delivered</div>
 				</div>
 				<div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-					<div style="font-size: 24px; font-weight: bold; color: #f57c00;">${data.total_billed}</div>
-					<div style="color: #666; font-size: 12px;">Total Billed</div>
+					<div style="font-size: 22px; font-weight: bold; color: #f57c00;">${data.total_billed}</div>
+					<div style="color: #666; font-size: 11px;">Total Billed</div>
 				</div>
 				<div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-					<div style="font-size: 24px; font-weight: bold; color: #1976d2;">${data.total_amount}</div>
-					<div style="color: #666; font-size: 12px;">Total Amount</div>
+					<div style="font-size: 22px; font-weight: bold; color: #1976d2;">${data.total_amount}</div>
+					<div style="color: #666; font-size: 11px;">Total Amount</div>
+				</div>
+			</div>
+
+			<!-- Production Planning KPIs -->
+			<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">🏭 Production Planning</h4>
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #1976d2;">${data.production_kpis.total_plans || 0}</div>
+						<div style="color: #666; font-size: 11px;">Total Plans</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${data.production_kpis.completed_plans || 0}</div>
+						<div style="color: #666; font-size: 11px;">Completed</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #f57c00;">${data.production_kpis.in_progress_plans || 0}</div>
+						<div style="color: #666; font-size: 11px;">In Progress</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #1976d2;">${data.production_kpis.overall_percentage || 0}%</div>
+						<div style="color: #666; font-size: 11px;">Progress</div>
+					</div>
+				</div>
+				<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">
+					<div style="background: #1976d2; height: 100%; width: ${data.production_kpis.overall_percentage || 0}%; transition: width 0.3s;"></div>
+				</div>
+			</div>
+
+			<!-- Procurement KPIs -->
+			<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📦 Procurement Status</h4>
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #1976d2;">${data.procurement_kpis.total_material_requests || 0}</div>
+						<div style="color: #666; font-size: 11px;">Material Requests</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #f57c00;">${data.procurement_kpis.total_purchase_orders || 0}</div>
+						<div style="color: #666; font-size: 11px;">Purchase Orders</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${data.procurement_kpis.total_purchase_receipts || 0}</div>
+						<div style="color: #666; font-size: 11px;">Receipts</div>
+					</div>
+					<div style="text-align: center;">
+						<div style="font-size: 20px; font-weight: bold; color: #1976d2;">${data.procurement_kpis.overall_percentage || 0}%</div>
+						<div style="color: #666; font-size: 11px;">Progress</div>
+					</div>
+				</div>
+				<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">
+					<div style="background: #f57c00; height: 100%; width: ${data.procurement_kpis.overall_percentage || 0}%; transition: width 0.3s;"></div>
 				</div>
 			</div>
 
 			<!-- Progress Bars -->
 			<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
-				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Progress Overview</h4>
+				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📊 Overall Progress</h4>
 				
 				<!-- Delivered Progress -->
 				<div style="margin-bottom: 15px;">
 					<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-						<span style="font-size: 14px; color: #333;">Delivery Progress</span>
+						<span style="font-size: 14px; color: #333;">🚚 Delivery Progress</span>
 						<span style="font-size: 14px; font-weight: bold; color: #2e7d32;">${data.overall_delivered_percentage}%</span>
 					</div>
 					<div style="background: #e0e0e0; height: 12px; border-radius: 6px; overflow: hidden;">
@@ -306,7 +358,7 @@ function create_order_status_dashboard_html(data) {
 				<!-- Billed Progress -->
 				<div style="margin-bottom: 15px;">
 					<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-						<span style="font-size: 14px; color: #333;">Billing Progress</span>
+						<span style="font-size: 14px; color: #333;">💰 Billing Progress</span>
 						<span style="font-size: 14px; font-weight: bold; color: #f57c00;">${data.overall_billed_percentage}%</span>
 					</div>
 					<div style="background: #e0e0e0; height: 12px; border-radius: 6px; overflow: hidden;">
@@ -319,19 +371,21 @@ function create_order_status_dashboard_html(data) {
 				</div>
 			</div>
 
-			<!-- Items Table -->
+			<!-- Comprehensive Items Table -->
 			<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-				<h4 style="margin: 0; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 16px;">Items Breakdown</h4>
+				<h4 style="margin: 0; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 16px;">📋 Items Breakdown</h4>
 				<div style="overflow-x: auto;">
-					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+					<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
 						<thead>
 							<tr style="background: #f8f9fa;">
-								<th style="padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0;">Item</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Ordered</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Delivered</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Delivered %</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed %</th>
+								<th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">Item</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Ordered</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Delivered</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Production</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Procurement</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Delivery %</th>
+								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billing %</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -340,34 +394,48 @@ function create_order_status_dashboard_html(data) {
 	data.items_data.forEach(item => {
 		let delivered_color = item.delivered_percentage >= 100 ? '#2e7d32' : item.delivered_percentage > 0 ? '#f57c00' : '#d32f2f';
 		let billed_color = item.billed_percentage >= 100 ? '#2e7d32' : item.billed_percentage > 0 ? '#f57c00' : '#d32f2f';
+		let production_color = item.production_percentage >= 100 ? '#2e7d32' : item.production_percentage > 0 ? '#1976d2' : '#d32f2f';
+		let procurement_color = item.procurement_percentage >= 100 ? '#2e7d32' : item.procurement_percentage > 0 ? '#f57c00' : '#d32f2f';
 		
 		html += `
 			<tr>
-				<td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-					<div style="font-weight: bold; font-size: 11px;">${item.item_code}</div>
-					<div style="font-size: 10px; color: #666;">${item.item_name}</div>
+				<td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">
+					<div style="font-weight: bold; font-size: 10px;">${item.item_code}</div>
+					<div style="font-size: 9px; color: #666;">${item.item_name}</div>
 				</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">${item.ordered_qty}</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">${item.ordered_qty}</td>
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
 					<span style="color: #2e7d32; font-weight: bold;">${item.delivered_qty}</span>
 				</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
 					<span style="color: #f57c00; font-weight: bold;">${item.billed_qty}</span>
 				</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
-					<div style="display: flex; align-items: center; justify-content: center;">
-						<div style="width: 40px; background: #e0e0e0; height: 6px; border-radius: 3px; margin-right: 5px;">
-							<div style="background: ${delivered_color}; height: 100%; width: ${item.delivered_percentage}%; border-radius: 3px;"></div>
-						</div>
-						<span style="font-size: 10px; color: ${delivered_color}; font-weight: bold;">${item.delivered_percentage}%</span>
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+					<div style="font-size: 9px;">
+						<div>Planned: ${item.production_planned_qty || 0}</div>
+						<div>Completed: ${item.production_completed_qty || 0}</div>
 					</div>
 				</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+					<div style="font-size: 9px;">
+						<div>MR: ${item.material_requested_qty || 0}</div>
+						<div>PO: ${item.po_ordered_qty || 0}</div>
+					</div>
+				</td>
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
 					<div style="display: flex; align-items: center; justify-content: center;">
-						<div style="width: 40px; background: #e0e0e0; height: 6px; border-radius: 3px; margin-right: 5px;">
+						<div style="width: 35px; background: #e0e0e0; height: 5px; border-radius: 3px; margin-right: 4px;">
+							<div style="background: ${delivered_color}; height: 100%; width: ${item.delivered_percentage}%; border-radius: 3px;"></div>
+						</div>
+						<span style="font-size: 9px; color: ${delivered_color}; font-weight: bold;">${item.delivered_percentage}%</span>
+					</div>
+				</td>
+				<td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+					<div style="display: flex; align-items: center; justify-content: center;">
+						<div style="width: 35px; background: #e0e0e0; height: 5px; border-radius: 3px; margin-right: 4px;">
 							<div style="background: ${billed_color}; height: 100%; width: ${item.billed_percentage}%; border-radius: 3px;"></div>
 						</div>
-						<span style="font-size: 10px; color: ${billed_color}; font-weight: bold;">${item.billed_percentage}%</span>
+						<span style="font-size: 9px; color: ${billed_color}; font-weight: bold;">${item.billed_percentage}%</span>
 					</div>
 				</td>
 			</tr>

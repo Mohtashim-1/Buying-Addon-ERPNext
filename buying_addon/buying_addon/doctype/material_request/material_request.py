@@ -4,7 +4,7 @@ from frappe.utils import get_url, flt
 
 
 @frappe.whitelist()
-def get_material_request_status_dashboard(material_request_name):
+def get_material_request_status_dashboard(material_request_name, page: int = 1, page_size: int = 100, include_items: int = 1):
     """
     Get comprehensive dashboard data for Material Request including:
     - MR Status and progress
@@ -28,50 +28,72 @@ def get_material_request_status_dashboard(material_request_name):
         total_billed = 0
         total_pending = 0
         
-        # Get items data with detailed tracking
-        items_data = []
+        # Pre-compute billed quantities per item via a single aggregated query
+        billed_qty_by_item_code = get_billed_quantity_map(material_request_name)
         
+        # Compute totals across all items
         for item in mr.items:
             try:
                 requested_qty = item.qty or 0
                 ordered_qty = item.ordered_qty or 0
                 received_qty = item.received_qty or 0
-                billed_qty = 0
-                
-                # Calculate billed quantity from linked Purchase Orders
-                billed_qty = get_billed_quantity_for_item(material_request_name, item.item_code)
-                
-                # Calculate pending quantity
+                billed_qty = billed_qty_by_item_code.get(item.item_code, 0) or 0
                 pending_qty = max(0, requested_qty - ordered_qty)
-                
                 total_requested += requested_qty
                 total_ordered += ordered_qty
                 total_received += received_qty
                 total_billed += billed_qty
                 total_pending += pending_qty
-                
-                # Calculate percentages
-                ordered_percentage = (ordered_qty / requested_qty * 100) if requested_qty > 0 else 0
-                received_percentage = (received_qty / requested_qty * 100) if requested_qty > 0 else 0
-                billed_percentage = (billed_qty / requested_qty * 100) if requested_qty > 0 else 0
-                
-                items_data.append({
-                    "item_code": item.item_code,
-                    "item_name": item.item_name,
-                    "requested_qty": requested_qty,
-                    "ordered_qty": ordered_qty,
-                    "received_qty": received_qty,
-                    "billed_qty": round(billed_qty, 2),
-                    "pending_qty": pending_qty,
-                    "ordered_percentage": round(ordered_percentage, 1),
-                    "received_percentage": round(received_percentage, 1),
-                    "billed_percentage": round(billed_percentage, 1),
-                    "rate": item.rate,
-                    "amount": item.amount
-                })
             except Exception as e:
-                frappe.log_error(f"Error processing item {item.item_code} in MR {material_request_name}: {str(e)}")
+                frappe.log_error(f"Error aggregating item {getattr(item, 'item_code', None)} in MR {material_request_name}: {str(e)}")
                 continue
+
+        # Build paginated items if requested
+        items_data = []
+        total_items = len(mr.items)
+        try:
+            page = int(page) if page else 1
+            page_size = int(page_size) if page_size else 100
+        except Exception:
+            page, page_size = 1, 100
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 50
+        total_pages = (total_items + page_size - 1) // page_size if page_size else 1
+        if total_pages < 1:
+            total_pages = 1
+        start_index = (page - 1) * page_size
+        end_index = min(start_index + page_size, total_items)
+
+        if int(include_items or 1):
+            for item in mr.items[start_index:end_index]:
+                try:
+                    requested_qty = item.qty or 0
+                    ordered_qty = item.ordered_qty or 0
+                    received_qty = item.received_qty or 0
+                    billed_qty = billed_qty_by_item_code.get(item.item_code, 0) or 0
+                    pending_qty = max(0, requested_qty - ordered_qty)
+                    ordered_percentage = (ordered_qty / requested_qty * 100) if requested_qty > 0 else 0
+                    received_percentage = (received_qty / requested_qty * 100) if requested_qty > 0 else 0
+                    billed_percentage = (billed_qty / requested_qty * 100) if requested_qty > 0 else 0
+                    items_data.append({
+                        "item_code": item.item_code,
+                        "item_name": item.item_name,
+                        "requested_qty": requested_qty,
+                        "ordered_qty": ordered_qty,
+                        "received_qty": received_qty,
+                        "billed_qty": round(billed_qty, 2),
+                        "pending_qty": pending_qty,
+                        "ordered_percentage": round(ordered_percentage, 1),
+                        "received_percentage": round(received_percentage, 1),
+                        "billed_percentage": round(billed_percentage, 1),
+                        "rate": item.rate,
+                        "amount": item.amount
+                    })
+                except Exception as e:
+                    frappe.log_error(f"Error processing item {item.item_code} in MR {material_request_name}: {str(e)}")
+                    continue
         
         # Overall percentages
         overall_ordered_percentage = (total_ordered / total_requested * 100) if total_requested > 0 else 0
@@ -111,6 +133,14 @@ def get_material_request_status_dashboard(material_request_name):
             "overall_received_percentage": round(overall_received_percentage, 1),
             "overall_billed_percentage": round(overall_billed_percentage, 1),
             "items_data": items_data,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "start_index": start_index,
+                "end_index": end_index,
+            },
             "po_status": po_status,
             "status_info": status_info
         }
@@ -154,6 +184,36 @@ def get_billed_quantity_for_item(material_request_name, item_code):
     except Exception as e:
         frappe.log_error(f"Error in get_billed_quantity_for_item for MR {material_request_name}, item {item_code}: {str(e)}")
         return 0
+
+
+def get_billed_quantity_map(material_request_name):
+    """
+    Calculate billed quantities for all items of an MR in a single query.
+    Returns a dict: { item_code: billed_qty }
+    """
+    try:
+        # Aggregate billed quantity per item_code from submitted POs linked to this MR
+        results = frappe.db.sql(
+            """
+            SELECT
+                poi.item_code,
+                SUM(CASE WHEN IFNULL(poi.rate, 0) > 0 THEN IFNULL(poi.billed_amt, 0) / poi.rate ELSE 0 END) AS billed_qty
+            FROM `tabPurchase Order Item` AS poi
+            INNER JOIN `tabPurchase Order` AS po ON po.name = poi.parent
+            WHERE po.docstatus = 1
+              AND po.material_request = %(mr)s
+            GROUP BY poi.item_code
+            """,
+            {"mr": material_request_name},
+            as_dict=True,
+        )
+        billed_map = {}
+        for row in results:
+            billed_map[row.get("item_code")] = float(row.get("billed_qty") or 0)
+        return billed_map
+    except Exception as e:
+        frappe.log_error(f"Error in get_billed_quantity_map for MR {material_request_name}: {str(e)}")
+        return {}
 
 
 def get_po_creation_status(material_request_name):
