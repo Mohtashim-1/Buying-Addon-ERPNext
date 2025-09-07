@@ -373,9 +373,18 @@ function create_order_status_dashboard_html(data) {
 
 			<!-- Comprehensive Items Table -->
 			<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-				<h4 style="margin: 0; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 16px;">📋 Items Breakdown</h4>
+				<div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+					<h4 style="margin: 0; font-size: 16px;">📋 Items Breakdown</h4>
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<span style="font-size: 12px; color: #666;">Search Items:</span>
+						<input type="text" id="items-search-input" placeholder="Search by item code or name..." 
+							   style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 250px;"
+							   onkeyup="filterItemsTable()">
+						<button onclick="clearItemsSearch()" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Clear</button>
+					</div>
+				</div>
 				<div style="overflow-x: auto;">
-					<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+					<table id="items-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
 						<thead>
 							<tr style="background: #f8f9fa;">
 								<th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">Item</th>
@@ -388,7 +397,7 @@ function create_order_status_dashboard_html(data) {
 								<th style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billing %</th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody id="items-table-body">
 	`;
 	
 	data.items_data.forEach(item => {
@@ -398,7 +407,7 @@ function create_order_status_dashboard_html(data) {
 		let procurement_color = item.procurement_percentage >= 100 ? '#2e7d32' : item.procurement_percentage > 0 ? '#f57c00' : '#d32f2f';
 		
 		html += `
-			<tr>
+			<tr class="item-row" data-item-code="${item.item_code}" data-item-name="${item.item_name}">
 				<td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">
 					<div style="font-weight: bold; font-size: 10px;">${item.item_code}</div>
 					<div style="font-size: 9px; color: #666;">${item.item_name}</div>
@@ -446,8 +455,47 @@ function create_order_status_dashboard_html(data) {
 						</tbody>
 					</table>
 				</div>
+				<div id="no-results-message" style="display: none; padding: 20px; text-align: center; color: #666; font-style: italic;">
+					No items found matching your search criteria.
+				</div>
 			</div>
 		</div>
+		
+		<script>
+		function filterItemsTable() {
+			const searchInput = document.getElementById('items-search-input');
+			const searchTerm = searchInput.value.toLowerCase();
+			const rows = document.querySelectorAll('.item-row');
+			const noResultsMessage = document.getElementById('no-results-message');
+			let visibleCount = 0;
+			
+			rows.forEach(row => {
+				const itemCode = row.getAttribute('data-item-code').toLowerCase();
+				const itemName = row.getAttribute('data-item-name').toLowerCase();
+				
+				if (itemCode.includes(searchTerm) || itemName.includes(searchTerm)) {
+					row.style.display = '';
+					visibleCount++;
+				} else {
+					row.style.display = 'none';
+				}
+			});
+			
+			// Show/hide no results message
+			if (visibleCount === 0 && searchTerm.length > 0) {
+				noResultsMessage.style.display = 'block';
+			} else {
+				noResultsMessage.style.display = 'none';
+			}
+		}
+		
+		function clearItemsSearch() {
+			const searchInput = document.getElementById('items-search-input');
+			searchInput.value = '';
+			filterItemsTable();
+			searchInput.focus();
+		}
+		</script>
 	`;
 	
 	return html;
