@@ -164,6 +164,7 @@ def get_comprehensive_sales_order_data(so):
     
     # Determine overall status
     status_info = get_comprehensive_status_info(
+        so,
         overall_delivered_percentage, 
         overall_billed_percentage, 
         production_kpis, 
@@ -198,10 +199,37 @@ def get_comprehensive_sales_order_data(so):
     }
 
 
-def get_comprehensive_status_info(delivered_percentage, billed_percentage, production_kpis, procurement_kpis):
+def get_comprehensive_status_info(so, delivered_percentage, billed_percentage, production_kpis, procurement_kpis):
     """
     Get comprehensive status information including production and procurement
     """
+    # First check the actual Sales Order status
+    if so.status == "Closed":
+        return {
+            "status": "Closed",
+            "status_color": "#6c757d",
+            "message": "Order has been closed"
+        }
+    elif so.status == "Cancelled":
+        return {
+            "status": "Cancelled", 
+            "status_color": "#dc3545",
+            "message": "Order has been cancelled"
+        }
+    elif so.status == "On Hold":
+        return {
+            "status": "On Hold",
+            "status_color": "#fd7e14", 
+            "message": "Order is on hold"
+        }
+    elif so.status == "Completed":
+        return {
+            "status": "Completed",
+            "status_color": "#2e7d32",
+            "message": "Order completed successfully"
+        }
+    
+    # If not a special status, determine based on progress
     status_info = {
         "status": "In Progress",
         "status_color": "#1976d2",
