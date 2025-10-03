@@ -133,13 +133,12 @@ override_doctype_class = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Purchase Order": {
+		"before_save": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items",
+		"on_update": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items"
+	}
+}
 
 # Scheduled Tasks
 # ---------------

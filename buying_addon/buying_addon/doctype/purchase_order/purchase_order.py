@@ -261,3 +261,157 @@ def get_last_purchase_details_custom(item_code=None):
 			return False
 	else:
 		return False
+
+
+def consolidate_purchase_order_items(doc, method):
+	"""
+	Consolidate duplicate items from doc.items into doc.custom_purchase_order_item_ct
+	Groups items by item_code and calculates:
+	- Sum of quantities
+	- Average rate (weighted by quantity)
+	- Total amount
+	"""
+	if not doc.items:
+		doc.custom_purchase_order_item_ct = []
+		return
+	
+	# Dictionary to store consolidated items
+	consolidated_items = {}
+	
+	# Process each item in doc.items
+	for item in doc.items:
+		item_code = item.item_code
+		
+		if item_code in consolidated_items:
+			# Item already exists, consolidate
+			existing = consolidated_items[item_code]
+			
+			# Sum quantities
+			existing['qty'] += item.qty or 0
+			
+			# Calculate weighted average rate
+			existing_qty = existing['qty'] - (item.qty or 0)  # Previous quantity
+			current_qty = item.qty or 0
+			current_rate = item.rate or 0
+			
+			if existing_qty + current_qty > 0:
+				existing['rate'] = ((existing['rate'] * existing_qty) + (current_rate * current_qty)) / (existing_qty + current_qty)
+			
+			# Sum amounts
+			existing['amount'] += item.amount or 0
+			
+		else:
+			# New item, add to consolidated items
+			consolidated_items[item_code] = {
+				'item': item_code,
+				'item_name': item.item_name,
+				'item_group': item.item_group,
+				'qty': item.qty or 0,
+				'uom': item.uom,
+				'rate': item.rate or 0,
+				'amount': item.amount or 0
+			}
+	
+	# Clear existing custom table
+	doc.custom_purchase_order_item_ct = []
+	
+	# Add consolidated items to custom table
+	for idx, (item_code, item_data) in enumerate(consolidated_items.items(), 1):
+		doc.append('custom_purchase_order_item_ct', {
+			'item': item_data['item'],
+			'item_name': item_data['item_name'],
+			'item_group': item_data['item_group'],
+			'qty': item_data['qty'],
+			'uom': item_data['uom'],
+			'rate': item_data['rate'],
+			'amount': item_data['amount']
+		})
+
+
+@frappe.whitelist()
+def get_consolidated_items(doc):
+	"""
+	Get consolidated items for Purchase Order
+	Returns consolidated items data for JavaScript consumption
+	"""
+	if not doc:
+		return []
+	
+	# Handle both dict and Document object
+	if isinstance(doc, dict):
+		items = doc.get('items', [])
+	else:
+		items = doc.items if hasattr(doc, 'items') else []
+	
+	if not items:
+		return []
+	
+	# Dictionary to store consolidated items
+	consolidated_items = {}
+	
+	# Process each item in doc.items
+	for item in items:
+		# Handle both dict and object
+		if isinstance(item, dict):
+			item_code = item.get('item_code')
+			item_name = item.get('item_name')
+			item_group = item.get('item_group')
+			qty = item.get('qty', 0)
+			uom = item.get('uom')
+			rate = item.get('rate', 0)
+			amount = item.get('amount', 0)
+		else:
+			item_code = item.item_code
+			item_name = item.item_name
+			item_group = item.item_group
+			qty = item.qty or 0
+			uom = item.uom
+			rate = item.rate or 0
+			amount = item.amount or 0
+		
+		if item_code in consolidated_items:
+			# Item already exists, consolidate
+			existing = consolidated_items[item_code]
+			
+			# Sum quantities
+			existing['qty'] += qty
+			
+			# Calculate weighted average rate
+			existing_qty = existing['qty'] - qty  # Previous quantity
+			current_qty = qty
+			current_rate = rate
+			
+			if existing_qty + current_qty > 0:
+				existing['rate'] = ((existing['rate'] * existing_qty) + (current_rate * current_qty)) / (existing_qty + current_qty)
+			
+			# Sum amounts
+			existing['amount'] += amount
+			
+		else:
+			# New item, add to consolidated items
+			consolidated_items[item_code] = {
+				'item': item_code,
+				'item_name': item_name,
+				'item_group': item_group,
+				'qty': qty,
+				'uom': uom,
+				'rate': rate,
+				'amount': amount
+			}
+	
+	# Convert to list format for return
+	consolidated_list = []
+	for idx, (item_code, item_data) in enumerate(consolidated_items.items(), 1):
+		consolidated_list.append({
+			'item': item_data['item'],
+			'item_name': item_data['item_name'],
+			'item_group': item_data['item_group'],
+			'qty': item_data['qty'],
+			'uom': item_data['uom'],
+			'rate': item_data['rate'],
+			'amount': item_data['amount']
+		})
+	
+	return consolidated_list
+
+
