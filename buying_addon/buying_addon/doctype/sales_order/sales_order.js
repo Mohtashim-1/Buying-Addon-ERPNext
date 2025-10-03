@@ -263,7 +263,7 @@ function create_order_status_dashboard_html(data) {
 					<div style="color: #666; font-size: 12px;">${data.status_info.message}</div>
 				</div>
 			</div>
-
+			
 			<!-- Main KPI Cards -->
 			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
 				<div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
@@ -283,7 +283,7 @@ function create_order_status_dashboard_html(data) {
 					<div style="color: #666; font-size: 11px;">Total Amount</div>
 				</div>
 			</div>
-
+			
 			<!-- Production Planning KPIs -->
 			<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
 				<h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">🏭 Production Planning</h4>
