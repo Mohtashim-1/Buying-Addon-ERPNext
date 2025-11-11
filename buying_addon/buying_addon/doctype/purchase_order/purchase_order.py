@@ -415,3 +415,46 @@ def get_consolidated_items(doc):
 	return consolidated_list
 
 
+@frappe.whitelist()
+def update_supplier_directly(purchase_order_name, new_supplier):
+	"""
+	Update supplier directly in the database for a Purchase Order.
+	This bypasses client-side event handlers to ensure the change persists.
+	"""
+	try:
+		# Get the Purchase Order document
+		po = frappe.get_doc("Purchase Order", purchase_order_name)
+		
+		# Check if document is in draft status
+		if po.docstatus != 0:
+			frappe.throw("Supplier can only be changed for draft Purchase Orders")
+		
+		# Validate supplier exists
+		if not frappe.db.exists("Supplier", new_supplier):
+			frappe.throw(f"Supplier '{new_supplier}' does not exist")
+		
+		# Store old supplier for logging
+		old_supplier = po.supplier
+		
+		# Update supplier directly in database
+		po.db_set("supplier", new_supplier, update_modified=False)
+		
+		# Also update in the document object
+		po.supplier = new_supplier
+		
+		# Reload the document to get fresh data
+		po.reload()
+		
+		# Return success response - client will handle the message display
+		return {
+			"success": True,
+			"old_supplier": old_supplier,
+			"new_supplier": new_supplier,
+			"message": f"Supplier changed from '{old_supplier}' to '{new_supplier}'"
+		}
+		
+	except Exception as e:
+		frappe.log_error(f"Error updating supplier: {str(e)}")
+		frappe.throw(f"Failed to update supplier: {str(e)}")
+
+
