@@ -1,18 +1,14 @@
 frappe.ui.form.on('Purchase Order', {
 	refresh(frm) {
-		console.log("[PO DEBUG] refresh event triggered", {
-			current_supplier: frm.doc.supplier,
-			preserved_supplier: frm._preserved_supplier,
-			original_supplier: frm._original_supplier,
-			user_changed: frm._user_changed_supplier,
-			docstatus: frm.doc.docstatus
-		});
+		// Prevent infinite loop - check if we're already processing
+		if (frm._refreshing_supplier) {
+			return;
+		}
 		
 		// Make supplier field editable if document is in draft status
 		// This fixes the issue where supplier field is read-only when PO is created from another PO
 		if (frm.doc.docstatus === 0 && frm.fields_dict.supplier) {
 			frm.set_df_property("supplier", "read_only", 0);
-			console.log("[PO DEBUG] Made supplier field editable in refresh");
 		}
 		
 		// Store the current supplier to prevent it from being reset
@@ -20,7 +16,6 @@ frappe.ui.form.on('Purchase Order', {
 		if (frm.doc.docstatus === 0 && frm.doc.supplier) {
 			if (!frm._user_changed_supplier) {
 				frm._original_supplier = frm.doc.supplier;
-				console.log("[PO DEBUG] Stored original supplier in refresh:", frm._original_supplier);
 			}
 		}
 		
@@ -29,15 +24,28 @@ frappe.ui.form.on('Purchase Order', {
 		// But allow changes when changing via button
 		if (frm.doc.docstatus === 0 && frm._user_changed_supplier && frm._preserved_supplier && !frm._changing_supplier_via_button) {
 			const has_production_plan_items = frm.doc.items && frm.doc.items.some(item => item.production_plan);
-			console.log("[PO DEBUG] Refresh check - has_production_plan_items:", has_production_plan_items);
 			if (has_production_plan_items && frm.doc.supplier !== frm._preserved_supplier) {
-				console.log("[PO DEBUG] Refresh - supplier was reset! Restoring to:", frm._preserved_supplier);
-				// Immediately set the value without triggering events to prevent loop
-				frm.doc.supplier = frm._preserved_supplier;
-				if (frm.fields_dict.supplier) {
-					frm.fields_dict.supplier.set_value(frm._preserved_supplier);
+				// Set flag to prevent infinite loop
+				frm._refreshing_supplier = true;
+				
+				// Use direct assignment without triggering events
+				if (frm.fields_dict.supplier && frm.fields_dict.supplier.$input) {
+					frm.fields_dict.supplier.$input.val(frm._preserved_supplier);
 				}
-				console.log("[PO DEBUG] Refresh - supplier restored immediately");
+				// Directly set the value without triggering property setter
+				if (frm.doc.supplier !== frm._preserved_supplier) {
+					Object.defineProperty(frm.doc, 'supplier', {
+						value: frm._preserved_supplier,
+						writable: true,
+						enumerable: true,
+						configurable: true
+					});
+				}
+				
+				// Reset flag after a short delay
+				setTimeout(() => {
+					frm._refreshing_supplier = false;
+				}, 100);
 			}
 		}
 		
@@ -69,18 +77,14 @@ frappe.ui.form.on('Purchase Order', {
 	},
 	
 	onload(frm) {
-		console.log("[PO DEBUG] onload called", {
-			docstatus: frm.doc.docstatus,
-			supplier: frm.doc.supplier,
-			has_items: !!frm.doc.items,
-			items_count: frm.doc.items ? frm.doc.items.length : 0
-		});
+		// Initialize flags
+		frm._refreshing_supplier = false;
+		frm._updating_items = false;
 		
 		// Make supplier field editable if document is in draft status
 		// This fixes the issue where supplier field is read-only when PO is created from another PO
 		if (frm.doc.docstatus === 0 && frm.fields_dict.supplier) {
 			frm.set_df_property("supplier", "read_only", 0);
-			console.log("[PO DEBUG] Made supplier field editable");
 		}
 		
 		// Store the original supplier from production plan
@@ -88,7 +92,6 @@ frappe.ui.form.on('Purchase Order', {
 			frm._original_supplier = frm.doc.supplier;
 			frm._user_changed_supplier = false;
 			frm._preserved_supplier = frm.doc.supplier;
-			console.log("[PO DEBUG] Stored original supplier:", frm._original_supplier);
 		}
 		
 		// Monitor supplier field changes to prevent automatic resets
@@ -98,27 +101,31 @@ frappe.ui.form.on('Purchase Order', {
 			
 			// Watch for supplier field changes using multiple methods
 			frm.fields_dict.supplier.$input.on('change', function() {
-				console.log("[PO DEBUG] Supplier field change event triggered", {
-					current_supplier: frm.doc.supplier,
-					last_supplier: last_supplier_value,
-					preserved_supplier: frm._preserved_supplier,
-					user_changed: frm._user_changed_supplier,
-					changing_via_button: frm._changing_supplier_via_button
-				});
+				// Prevent infinite loop
+				if (frm._refreshing_supplier) {
+					return;
+				}
+				
 				last_supplier_value = frm.doc.supplier;
 				
 				// Allow changes when changing via button
 				if (frm.doc.docstatus === 0 && frm._user_changed_supplier && frm._preserved_supplier && !frm._changing_supplier_via_button) {
 					const has_production_plan_items = frm.doc.items && frm.doc.items.some(item => item.production_plan);
-					console.log("[PO DEBUG] Has production plan items:", has_production_plan_items);
 					if (has_production_plan_items && frm.doc.supplier !== frm._preserved_supplier) {
-						console.log("[PO DEBUG] Supplier was changed automatically, restoring to:", frm._preserved_supplier);
+						// Set flag to prevent loop
+						frm._refreshing_supplier = true;
 						// Supplier was changed automatically, restore user's selection
 						setTimeout(() => {
-							if (!frm._changing_supplier_via_button) {
-								frm.set_value("supplier", frm._preserved_supplier);
-								console.log("[PO DEBUG] Supplier restored to:", frm._preserved_supplier);
+							if (!frm._changing_supplier_via_button && frm.fields_dict.supplier) {
+								frm.fields_dict.supplier.$input.val(frm._preserved_supplier);
+								Object.defineProperty(frm.doc, 'supplier', {
+									value: frm._preserved_supplier,
+									writable: true,
+									enumerable: true,
+									configurable: true
+								});
 							}
+							frm._refreshing_supplier = false;
 						}, 10);
 					}
 				}
@@ -159,29 +166,27 @@ frappe.ui.form.on('Purchase Order', {
 						return _supplier;
 					},
 					set: function(value) {
-						console.log("[PO DEBUG] Supplier property setter called", {
-							from: _supplier,
-							to: value,
-							preserved: frm._preserved_supplier,
-							user_changed: frm._user_changed_supplier,
-							changing_via_button: frm._changing_supplier_via_button,
-							stack: new Error().stack
-						});
+						// Prevent infinite loop - if we're refreshing supplier, allow the change
+						if (frm._refreshing_supplier) {
+							_supplier = value;
+							return;
+						}
 						
 						// Allow change if it's being changed via the button AND it's changing TO the target supplier
 						// Block any changes FROM the target supplier back to something else
 						if (frm._changing_supplier_via_button) {
 							if (value === frm._target_supplier_via_button) {
-								console.log("[PO DEBUG] Allowing supplier change via button TO target:", value);
 								_supplier = value;
 								return;
 							} else {
-								console.log("[PO DEBUG] BLOCKING supplier change via button - trying to change FROM", frm._target_supplier_via_button, "TO", value);
 								// Block the change, keep the target supplier
 								_supplier = frm._target_supplier_via_button;
 								if (frm.fields_dict.supplier && frm.fields_dict.supplier.$input) {
+									frm._refreshing_supplier = true;
 									frm.fields_dict.supplier.$input.val(frm._target_supplier_via_button);
-									frm.fields_dict.supplier.set_value(frm._target_supplier_via_button);
+									setTimeout(() => {
+										frm._refreshing_supplier = false;
+									}, 50);
 								}
 								return;
 							}
@@ -190,13 +195,15 @@ frappe.ui.form.on('Purchase Order', {
 						// If user changed supplier (via button or manually) and it's being reset, BLOCK the change immediately
 						// This applies regardless of production plan items - once user changes supplier, preserve it
 						if (frm.doc.docstatus === 0 && frm._user_changed_supplier && frm._preserved_supplier && value !== frm._preserved_supplier) {
-							console.log("[PO DEBUG] BLOCKING supplier reset! User changed supplier to", frm._preserved_supplier, "but something is trying to change it to", value);
 							// Don't set the value, keep the preserved supplier
 							_supplier = frm._preserved_supplier;
 							// Update the field display without triggering events
 							if (frm.fields_dict.supplier && frm.fields_dict.supplier.$input) {
+								frm._refreshing_supplier = true;
 								frm.fields_dict.supplier.$input.val(frm._preserved_supplier);
-								frm.fields_dict.supplier.set_value(frm._preserved_supplier);
+								setTimeout(() => {
+									frm._refreshing_supplier = false;
+								}, 50);
 							}
 							return; // Exit early, don't set the new value
 						}
@@ -217,13 +224,10 @@ frappe.ui.form.on('Purchase Order', {
 	},
 	
 	supplier: function(frm) {
-		console.log("[PO DEBUG] supplier event triggered", {
-			current_supplier: frm.doc.supplier,
-			original_supplier: frm._original_supplier,
-			preserved_supplier: frm._preserved_supplier,
-			user_changed: frm._user_changed_supplier,
-			docstatus: frm.doc.docstatus
-		});
+		// Prevent infinite loop
+		if (frm._refreshing_supplier) {
+			return;
+		}
 		
 		// Track when user manually changes the supplier
 		// This prevents supplier from reverting to production plan supplier
@@ -233,48 +237,20 @@ frappe.ui.form.on('Purchase Order', {
 				if (frm.doc.supplier === frm._target_supplier_via_button) {
 					frm._user_changed_supplier = true;
 					frm._preserved_supplier = frm.doc.supplier;
-					console.log("[PO DEBUG] Button change confirmed - supplier set to:", frm._preserved_supplier);
-				} else {
-					console.log("[PO DEBUG] Button change - supplier doesn't match target, keeping preserved:", frm._preserved_supplier);
 				}
 			}
 			// Only mark as user changed if supplier actually changed (and not via button with wrong target)
 			else if (frm._preserved_supplier && frm.doc.supplier !== frm._preserved_supplier) {
 				frm._user_changed_supplier = true;
 				frm._preserved_supplier = frm.doc.supplier;
-				console.log("[PO DEBUG] User changed supplier to:", frm._preserved_supplier);
 			} else if (!frm._preserved_supplier) {
 				// First time setting supplier - mark as user changed if it's different from original
 				if (frm._original_supplier && frm.doc.supplier !== frm._original_supplier) {
 					frm._user_changed_supplier = true;
 					frm._preserved_supplier = frm.doc.supplier;
-					console.log("[PO DEBUG] First time - user changed supplier from", frm._original_supplier, "to", frm._preserved_supplier);
 				} else {
 					frm._preserved_supplier = frm.doc.supplier;
-					console.log("[PO DEBUG] First time - preserving supplier:", frm._preserved_supplier);
 				}
-			}
-		}
-		
-		// Prevent supplier from being reset if user has manually changed it
-		// But allow changes when changing via button
-		if (frm.doc.docstatus === 0 && frm._user_changed_supplier && frm._preserved_supplier && !frm._changing_supplier_via_button) {
-			const has_production_plan_items = frm.doc.items && frm.doc.items.some(item => item.production_plan);
-			console.log("[PO DEBUG] Checking if supplier needs restoration", {
-				has_production_plan_items: has_production_plan_items,
-				current_supplier: frm.doc.supplier,
-				preserved_supplier: frm._preserved_supplier,
-				changing_via_button: frm._changing_supplier_via_button,
-				needs_restore: has_production_plan_items && frm.doc.supplier !== frm._preserved_supplier
-			});
-			if (has_production_plan_items && frm.doc.supplier !== frm._preserved_supplier) {
-				console.log("[PO DEBUG] Supplier was reset! Restoring to:", frm._preserved_supplier);
-				// Supplier was reset, restore it immediately without triggering events
-				frm.doc.supplier = frm._preserved_supplier;
-				if (frm.fields_dict.supplier) {
-					frm.fields_dict.supplier.set_value(frm._preserved_supplier);
-				}
-				console.log("[PO DEBUG] Supplier restored immediately");
 			}
 		}
 	},
@@ -312,58 +288,56 @@ frappe.ui.form.on('Purchase Order', {
 	
 	// Reload dashboard when items are updated
 	items: function(frm) {
-		console.log("[PO DEBUG] items event triggered", {
-			items_count: frm.doc.items ? frm.doc.items.length : 0,
-			current_supplier: frm.doc.supplier,
-			preserved_supplier: frm._preserved_supplier,
-			user_changed: frm._user_changed_supplier
-		});
-		
 		// Prevent supplier from being reset when items are from production plan
 		// This fixes the issue where supplier reverts to production plan supplier
-		if (frm.doc.docstatus === 0) {
+		if (frm.doc.docstatus === 0 && !frm._refreshing_supplier) {
 			// Check if any items have production_plan reference
 			const has_production_plan_items = frm.doc.items && frm.doc.items.some(item => item.production_plan);
-			console.log("[PO DEBUG] Has production plan items:", has_production_plan_items);
 			
 			if (has_production_plan_items) {
-				// Log which items have production_plan
-				const pp_items = frm.doc.items.filter(item => item.production_plan);
-				console.log("[PO DEBUG] Items with production_plan:", pp_items.map(item => ({
-					item_code: item.item_code,
-					production_plan: item.production_plan
-				})));
-				
 				// If user has manually changed supplier, preserve it
 				// But allow changes when changing via button
 				if (frm._user_changed_supplier && frm._preserved_supplier && !frm._changing_supplier_via_button) {
-					console.log("[PO DEBUG] User changed supplier, preserving:", frm._preserved_supplier);
 					// Preserve the user's supplier selection
 					setTimeout(() => {
-						if (frm.doc.supplier !== frm._preserved_supplier && !frm._changing_supplier_via_button) {
-							console.log("[PO DEBUG] Items changed - supplier was reset! Restoring to:", frm._preserved_supplier);
-							frm.set_value("supplier", frm._preserved_supplier);
-						} else {
-							console.log("[PO DEBUG] Items changed - supplier is correct:", frm.doc.supplier);
+						if (frm.doc.supplier !== frm._preserved_supplier && !frm._changing_supplier_via_button && !frm._refreshing_supplier) {
+							frm._refreshing_supplier = true;
+							if (frm.fields_dict.supplier && frm.fields_dict.supplier.$input) {
+								frm.fields_dict.supplier.$input.val(frm._preserved_supplier);
+							}
+							Object.defineProperty(frm.doc, 'supplier', {
+								value: frm._preserved_supplier,
+								writable: true,
+								enumerable: true,
+								configurable: true
+							});
+							setTimeout(() => {
+								frm._refreshing_supplier = false;
+							}, 50);
 						}
 					}, 50);
 				} else if (frm.doc.supplier && !frm._preserved_supplier) {
 					// Store current supplier if not already stored
 					frm._preserved_supplier = frm.doc.supplier;
-					console.log("[PO DEBUG] Storing current supplier:", frm._preserved_supplier);
 				}
 			}
 		}
 		
-		if (frm.doc.name && !frm.doc.__islocal) {
+		// Load dashboard only once, not on every item change
+		if (frm.doc.name && !frm.doc.__islocal && !frm._loading_dashboard) {
+			frm._loading_dashboard = true;
 			setTimeout(() => {
 				frm.trigger("load_order_status_dashboard");
+				frm._loading_dashboard = false;
 			}, 1000);
 		}
-		// Trigger consolidation when items change
-		if (frm.doc.items && frm.doc.items.length > 0) {
+		
+		// Trigger consolidation when items change (only once)
+		if (frm.doc.items && frm.doc.items.length > 0 && !frm._consolidating_items) {
+			frm._consolidating_items = true;
 			setTimeout(() => {
 				consolidate_items(frm);
+				frm._consolidating_items = false;
 			}, 500);
 		}
 	}
@@ -739,14 +713,21 @@ frappe.ui.form.on('Purchase Order',{
 // })
 frappe.ui.form.on('Purchase Order',{
 	refresh:function(frm){
-		$.each(frm.doc.items, function(i, d){
-			if(d.custom_temp_qty == 0){
-				d.custom_temp_qty = d.qty
-				d.custom_real_qty = d.qty
-			}
-		});
-		frm.refresh_field('items');
-		cur_frm.refresh_field("items")
+		// Only update if items exist and not already processing
+		if (frm.doc.items && frm.doc.items.length > 0 && !frm._updating_items) {
+			frm._updating_items = true;
+			$.each(frm.doc.items, function(i, d){
+				if(d.custom_temp_qty == 0){
+					d.custom_temp_qty = d.qty
+					d.custom_real_qty = d.qty
+				}
+			});
+			// Only refresh once, not twice
+			frm.refresh_field('items');
+			setTimeout(() => {
+				frm._updating_items = false;
+			}, 100);
+		}
 	}
 })
 
