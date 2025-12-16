@@ -1,8 +1,9 @@
-// ========== MAIN FILE COMMENTED OUT - FEATURES SPLIT INTO SEPARATE FILES ==========
-/*
+// ========== FEATURE 1: SUPPLIER PROTECTION LOGIC ==========
+// This file handles supplier protection when production plan items exist
+// To enable: Uncomment this file in hooks.py
+
 frappe.ui.form.on('Purchase Order', {
 	refresh(frm) {
-		// Basic refresh handler - only essential features
 		// Make supplier field editable if document is in draft status
 		if (frm.doc.docstatus === 0 && frm.fields_dict.supplier) {
 			frm.set_df_property("supplier", "read_only", 0);
@@ -79,38 +80,10 @@ frappe.ui.form.on('Purchase Order', {
 				}
 			}, 300); // Check every 300ms
 		}
-		
-		// Add dashboard button
-		if (frm.doc.docstatus === 1) {
-			frm.add_custom_button(__('Order Dashboard'), function() {
-				show_purchase_order_dashboard(frm);
-			}, __('View'));
-		}
-		
-		// Add consolidation button
-		if (frm.doc.items && frm.doc.items.length > 0) {
-			frm.add_custom_button(__('Consolidate Items'), function() {
-				consolidate_items(frm);
-			}, __('Actions'));
-		}
-		
-		// Add Change Supplier button (only for draft documents)
-		if (frm.doc.docstatus === 0) {
-			frm.add_custom_button(__('Change Supplier'), function() {
-				change_supplier(frm);
-			}, __('Actions'));
-		}
-		
-		// Load dashboard data for custom_order_status field
-		if (frm.doc.name && !frm.doc.__islocal) {
-			frm.trigger("load_order_status_dashboard");
-		}
 	},
 	
-	// Simple supplier handler - only to allow changes when production plan items exist
+	// Supplier handler - store user's supplier choice
 	supplier: function(frm) {
-		// Standard ERPNext blocks supplier changes when production plan items exist
-		// We need to allow manual supplier changes even with production plan items
 		if (frm.doc.docstatus === 0 && frm.doc.supplier && frm.fields_dict.supplier) {
 			// Don't update if we're currently restoring supplier (prevent loop)
 			if (frm._restoring_supplier) {
@@ -128,10 +101,8 @@ frappe.ui.form.on('Purchase Order', {
 		}
 	},
 	
-	// Simple items handler - prevent supplier reset when items change
+	// Items handler - prevent supplier reset when items change
 	items: function(frm) {
-		// Standard ERPNext resets supplier when items with production_plan change
-		// Store current supplier before items trigger standard handler
 		if (frm.doc.docstatus === 0 && frm.doc.supplier && frm.fields_dict.supplier) {
 			// Store the supplier that user wants to keep (use stored value if available)
 			const current_supplier = frm._user_supplier || frm.doc.supplier;
@@ -143,7 +114,6 @@ frappe.ui.form.on('Purchase Order', {
 				frm._monitoring_supplier = true;
 				
 				// Watch for supplier changes multiple times with increasing delays
-				// This catches both immediate resets and delayed resets from server calls
 				[50, 100, 200, 500, 1000, 2000].forEach(delay => {
 					setTimeout(() => {
 						if (frm.doc.supplier !== current_supplier && 
@@ -183,66 +153,5 @@ frappe.ui.form.on('Purchase Order', {
 			}
 		}
 	},
-	
-	load_order_status_dashboard: function(frm) {
-		frm.call({
-			method: 'buying_addon.buying_addon.doctype.purchase_order.purchase_order.get_purchase_order_status_dashboard',
-			args: { purchase_order_name: frm.doc.name },
-			callback: function(r) {
-				if (r.message) {
-					frm.events.render_order_status_dashboard(frm, r.message);
-				} else {
-					// Show error message if no data
-					if (frm.fields_dict.custom_order_status) {
-						const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
-						$(wrapper).empty();
-						$(wrapper).append('<div style="padding: 20px; text-align: center; color: #666;">No dashboard data available</div>');
-					}
-				}
-			},
-			error: function(r) {
-				console.error('Error loading dashboard data:', r);
-			}
-		});
-	},
-	
-	render_order_status_dashboard: function(frm, data) {
-		if (frm.fields_dict.custom_order_status) {
-			const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
-			const dashboard_html = create_order_status_dashboard_html(data);
-			$(wrapper).empty();
-			$(dashboard_html).appendTo(wrapper);
-		}
-	},
-})
+});
 
-// All helper functions commented out - moved to separate files
-*/
-
-// ========== LOAD SEPARATE FEATURE FILES ==========
-// Features are now split into separate files for easier testing and debugging
-// Uncomment the files you want to test:
-
-// Feature 1: Supplier Protection Logic
-// Load: purchase_order_supplier_protection.js
-
-// Feature 2: Dashboard Functionality
-// Load: purchase_order_dashboard.js
-
-// Feature 3: Last Purchase Rates
-// Load: purchase_order_last_purchase_rates.js
-
-// Feature 4: PO Rate Setting
-// Load: purchase_order_rate_setting.js
-
-// Feature 5: Before Submit Validation
-// Load: purchase_order_validation.js
-
-// Feature 6: Custom Qty Handlers
-// Load: purchase_order_custom_qty.js
-
-// Feature 7: Consolidation
-// Load: purchase_order_consolidation.js
-
-// Feature 8: Change Supplier Button
-// Load: purchase_order_change_supplier.js
