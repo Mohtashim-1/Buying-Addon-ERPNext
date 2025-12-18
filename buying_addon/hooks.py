@@ -29,37 +29,19 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {
-    # ========== SEPARATE FEATURES - LOAD MULTIPLE FILES ==========
+    # ========== PURCHASE ORDER - ALL FEATURES COMBINED ==========
     # NOTE: hooks.py can only load ONE file per doctype
-    # To load multiple features, use the combined file or load them separately
-    
-    # Option 1: Load supplier protection only (for testing)
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_supplier_protection.js",
-    
-    # Option 2: Load dashboard + consolidation (combined file)
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_dashboard_consolidation.js",
-    
-    # Option 3: Load individual features (one at a time for testing)
-    # Feature 2: Dashboard Functionality
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_dashboard.js",
-    
-    # Feature 3: Last Purchase Rates
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_last_purchase_rates.js",
-    
-    # Feature 4: PO Rate Setting
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_rate_setting.js",
-    
-    # Feature 5: Before Submit Validation
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_validation.js",
-    
-    # Feature 6: Custom Qty Handlers
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_custom_qty.js",
-    
-    # Feature 7: Consolidation
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_consolidation.js",
-    
-    # Feature 8: Change Supplier Button
-    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_change_supplier.js",
+    # All features are combined in purchase_order_all_features.js
+    # This includes:
+    # - Feature 1: Supplier Protection Logic
+    # - Feature 2: Dashboard Functionality (with latest improvements)
+    # - Feature 3: Last Purchase Rates
+    # - Feature 4: PO Rate Setting
+    # - Feature 5: Before Submit Validation
+    # - Feature 6: Custom Qty Handlers
+    # - Feature 7: Consolidation
+    # - Feature 8: Change Supplier Button
+    "Purchase Order" : "buying_addon/doctype/purchase_order/purchase_order_all_features.js",
     
     # ========== OTHER DOCTYPES ==========
     "Material Request" : "buying_addon/doctype/material_request/material_request.js",

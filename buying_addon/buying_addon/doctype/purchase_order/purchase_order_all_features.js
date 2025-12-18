@@ -107,9 +107,26 @@ frappe.ui.form.on('Purchase Order', {
 		}
 		
 		// ========== FEATURE 2: LOAD ORDER STATUS DASHBOARD ==========
-		// Load dashboard data for custom_order_status field
-		if (frm.doc.name && !frm.doc.__islocal) {
-			frm.trigger("load_order_status_dashboard");
+		// Load dashboard data for custom_order_status field (ONLY for submitted documents)
+		if (frm.doc.docstatus === 1 && frm.doc.name && !frm.doc.__islocal) {
+			// Wait for field to be available and visible
+			const checkAndLoad = () => {
+				if (frm.fields_dict.custom_order_status) {
+					const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
+					// Check if field is visible (not hidden by depends_on or tab)
+					if (wrapper.length > 0 && wrapper.is(':visible')) {
+						frm.trigger("load_order_status_dashboard");
+					} else {
+						// Field exists but not visible yet, retry
+						setTimeout(checkAndLoad, 300);
+					}
+				} else {
+					// Field not found yet, retry
+					setTimeout(checkAndLoad, 300);
+				}
+			};
+			// Start checking after a short delay to allow form to render
+			setTimeout(checkAndLoad, 500);
 		}
 	},
 	
@@ -187,35 +204,100 @@ frappe.ui.form.on('Purchase Order', {
 	
 	// ========== FEATURE 2: LOAD ORDER STATUS DASHBOARD ==========
 	load_order_status_dashboard: function(frm) {
+		console.log('[DASHBOARD DEBUG] Loading dashboard for PO:', frm.doc.name);
+		console.log('[DASHBOARD DEBUG] custom_order_status field exists:', !!frm.fields_dict.custom_order_status);
+		
 		frm.call({
 			method: 'buying_addon.buying_addon.doctype.purchase_order.purchase_order.get_purchase_order_status_dashboard',
 			args: { purchase_order_name: frm.doc.name },
 			callback: function(r) {
+				console.log('[DASHBOARD DEBUG] Server response:', r);
 				if (r.message) {
+					console.log('[DASHBOARD DEBUG] Rendering dashboard with data:', r.message);
 					frm.events.render_order_status_dashboard(frm, r.message);
 				} else {
+					console.log('[DASHBOARD DEBUG] No data received from server');
 					// Show error message if no data
 					if (frm.fields_dict.custom_order_status) {
 						const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
 						$(wrapper).empty();
 						$(wrapper).append('<div style="padding: 20px; text-align: center; color: #666;">No dashboard data available</div>');
+					} else {
+						console.error('[DASHBOARD DEBUG] custom_order_status field not found!');
 					}
 				}
 			},
 			error: function(r) {
-				console.error('Error loading dashboard data:', r);
+				console.error('[DASHBOARD DEBUG] Error loading dashboard data:', r);
+				if (frm.fields_dict.custom_order_status) {
+					const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
+					$(wrapper).empty();
+					$(wrapper).append('<div style="padding: 20px; text-align: center; color: #d32f2f;">Error loading dashboard: ' + (r.message || 'Unknown error') + '</div>');
+				}
 			}
 		});
 	},
 	
 	// ========== FEATURE 2: RENDER ORDER STATUS DASHBOARD ==========
 	render_order_status_dashboard: function(frm, data) {
-		if (frm.fields_dict.custom_order_status) {
-			const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
-			const dashboard_html = create_order_status_dashboard_html(data);
-			$(wrapper).empty();
-			$(dashboard_html).appendTo(wrapper);
-		}
+		console.log('[DASHBOARD DEBUG] render_order_status_dashboard called');
+		console.log('[DASHBOARD DEBUG] custom_order_status field exists:', !!frm.fields_dict.custom_order_status);
+		
+		// Try multiple times if field is not ready
+		let attempts = 0;
+		const maxAttempts = 10; // Increased attempts
+		
+		const tryRender = () => {
+			attempts++;
+			console.log(`[DASHBOARD DEBUG] Attempt ${attempts} to render dashboard`);
+			
+			if (frm.fields_dict.custom_order_status) {
+				const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
+				console.log('[DASHBOARD DEBUG] Wrapper found:', wrapper.length > 0);
+				console.log('[DASHBOARD DEBUG] Wrapper visible:', wrapper.is(':visible'));
+				
+				if (wrapper.length > 0) {
+					// Check if wrapper is visible (might be in hidden tab)
+					if (!wrapper.is(':visible')) {
+						console.log('[DASHBOARD DEBUG] Wrapper exists but not visible (might be in inactive tab), retrying...');
+						if (attempts < maxAttempts) {
+							setTimeout(tryRender, 300);
+							return false;
+						}
+					}
+					
+					const dashboard_html = create_order_status_dashboard_html(data);
+					console.log('[DASHBOARD DEBUG] Dashboard HTML created, length:', dashboard_html.length);
+					
+					$(wrapper).empty();
+					$(dashboard_html).appendTo(wrapper);
+					
+					console.log('[DASHBOARD DEBUG] Dashboard rendered successfully');
+					return true;
+				} else {
+					console.log('[DASHBOARD DEBUG] Wrapper element not found in DOM, retrying...');
+					if (attempts < maxAttempts) {
+						setTimeout(tryRender, 300);
+					} else {
+						console.error('[DASHBOARD DEBUG] Max attempts reached, wrapper still not found!');
+						console.error('[DASHBOARD DEBUG] Make sure you are on the "Status" tab to see the dashboard');
+					}
+					return false;
+				}
+			} else {
+				console.log('[DASHBOARD DEBUG] custom_order_status field not found, retrying...');
+				console.log('[DASHBOARD DEBUG] Available fields:', Object.keys(frm.fields_dict));
+				if (attempts < maxAttempts) {
+					setTimeout(tryRender, 300);
+				} else {
+					console.error('[DASHBOARD DEBUG] Max attempts reached, field still not found!');
+					console.error('[DASHBOARD DEBUG] Field might not be loaded. Check if custom_order_status field exists in Purchase Order doctype.');
+				}
+				return false;
+			}
+		};
+		
+		tryRender();
 	},
 	
 	// ========== FEATURE 5: BEFORE SUBMIT VALIDATION ==========

@@ -13,7 +13,7 @@
    "columns": 0,
    "creation": "2025-01-27 10:00:00",
    "default": null,
-   "depends_on": null,
+   "depends_on": "eval:doc.docstatus == 1",
    "description": null,
    "docstatus": 0,
    "dt": "Purchase Order",

@@ -103,10 +103,24 @@ frappe.ui.form.on('Purchase Order', {
 		// ========== FEATURE 2: LOAD ORDER STATUS DASHBOARD ==========
 		// Load dashboard data for custom_order_status field (ONLY for submitted documents)
 		if (frm.doc.docstatus === 1 && frm.doc.name && !frm.doc.__islocal) {
-			// Add delay to ensure field is rendered
-			setTimeout(() => {
-				frm.trigger("load_order_status_dashboard");
-			}, 500);
+			// Wait for field to be available and visible
+			const checkAndLoad = () => {
+				if (frm.fields_dict.custom_order_status) {
+					const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
+					// Check if field is visible (not hidden by depends_on or tab)
+					if (wrapper.length > 0 && wrapper.is(':visible')) {
+						frm.trigger("load_order_status_dashboard");
+					} else {
+						// Field exists but not visible yet, retry
+						setTimeout(checkAndLoad, 300);
+					}
+				} else {
+					// Field not found yet, retry
+					setTimeout(checkAndLoad, 300);
+				}
+			};
+			// Start checking after a short delay to allow form to render
+			setTimeout(checkAndLoad, 500);
 		}
 	},
 	
@@ -223,7 +237,7 @@ frappe.ui.form.on('Purchase Order', {
 		
 		// Try multiple times if field is not ready
 		let attempts = 0;
-		const maxAttempts = 5;
+		const maxAttempts = 10; // Increased attempts
 		
 		const tryRender = () => {
 			attempts++;
@@ -232,8 +246,18 @@ frappe.ui.form.on('Purchase Order', {
 			if (frm.fields_dict.custom_order_status) {
 				const wrapper = $(frm.fields_dict.custom_order_status.wrapper);
 				console.log('[DASHBOARD DEBUG] Wrapper found:', wrapper.length > 0);
+				console.log('[DASHBOARD DEBUG] Wrapper visible:', wrapper.is(':visible'));
 				
 				if (wrapper.length > 0) {
+					// Check if wrapper is visible (might be in hidden tab)
+					if (!wrapper.is(':visible')) {
+						console.log('[DASHBOARD DEBUG] Wrapper exists but not visible (might be in inactive tab), retrying...');
+						if (attempts < maxAttempts) {
+							setTimeout(tryRender, 300);
+							return false;
+						}
+					}
+					
 					const dashboard_html = create_order_status_dashboard_html(data);
 					console.log('[DASHBOARD DEBUG] Dashboard HTML created, length:', dashboard_html.length);
 					
@@ -245,9 +269,10 @@ frappe.ui.form.on('Purchase Order', {
 				} else {
 					console.log('[DASHBOARD DEBUG] Wrapper element not found in DOM, retrying...');
 					if (attempts < maxAttempts) {
-						setTimeout(tryRender, 200);
+						setTimeout(tryRender, 300);
 					} else {
 						console.error('[DASHBOARD DEBUG] Max attempts reached, wrapper still not found!');
+						console.error('[DASHBOARD DEBUG] Make sure you are on the "Status" tab to see the dashboard');
 					}
 					return false;
 				}
@@ -255,9 +280,10 @@ frappe.ui.form.on('Purchase Order', {
 				console.log('[DASHBOARD DEBUG] custom_order_status field not found, retrying...');
 				console.log('[DASHBOARD DEBUG] Available fields:', Object.keys(frm.fields_dict));
 				if (attempts < maxAttempts) {
-					setTimeout(tryRender, 200);
+					setTimeout(tryRender, 300);
 				} else {
 					console.error('[DASHBOARD DEBUG] Max attempts reached, field still not found!');
+					console.error('[DASHBOARD DEBUG] Field might not be loaded. Check if custom_order_status field exists in Purchase Order doctype.');
 				}
 				return false;
 			}
