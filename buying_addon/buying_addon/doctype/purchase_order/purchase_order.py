@@ -15,7 +15,10 @@ def get_purchase_order_dashboard_data(purchase_order_name):
     - Received Percentage
     - Items breakdown
     """
-    po = frappe.get_doc("Purchase Order", purchase_order_name)
+    try:
+        po = frappe.get_doc("Purchase Order", purchase_order_name)
+    except frappe.DoesNotExistError:
+        return None
     
     # Calculate received percentage
     total_ordered = 0
@@ -456,5 +459,4 @@ def update_supplier_directly(purchase_order_name, new_supplier):
 	except Exception as e:
 		frappe.log_error(f"Error updating supplier: {str(e)}")
 		frappe.throw(f"Failed to update supplier: {str(e)}")
-
 

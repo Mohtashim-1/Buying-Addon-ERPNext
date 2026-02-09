@@ -11,8 +11,8 @@ frappe.ui.form.on('Purchase Order', {
 			}, __('View'));
 		}
 		
-		// Load dashboard data for custom_order_status field
-		if (frm.doc.name && !frm.doc.__islocal) {
+		// Load dashboard data for custom_order_status field (only for submitted docs)
+		if (frm.doc.docstatus === 1 && frm.doc.name && !frm.doc.__islocal) {
 			frm.trigger("load_order_status_dashboard");
 		}
 	},
@@ -326,4 +326,3 @@ function create_order_status_dashboard_html(data) {
 	
 	return html;
 }
-
