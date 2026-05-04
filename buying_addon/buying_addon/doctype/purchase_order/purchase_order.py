@@ -180,10 +180,10 @@ def get_detailed_status_info(po, received_percentage, billed_percentage):
         })
     elif received_percentage >= 100 and billed_percentage < 100:
         status_info.update({
-            "status": "To Bill",
+            "status": "Balance",
             "status_color": "orange",
             "progress_color": "#f57c00",
-            "message": "All items received, pending billing"
+            "message": "All items received, balance billing pending"
         })
     elif received_percentage < 100 and billed_percentage < 100:
         status_info.update({
@@ -459,4 +459,3 @@ def update_supplier_directly(purchase_order_name, new_supplier):
 	except Exception as e:
 		frappe.log_error(f"Error updating supplier: {str(e)}")
 		frappe.throw(f"Failed to update supplier: {str(e)}")
-

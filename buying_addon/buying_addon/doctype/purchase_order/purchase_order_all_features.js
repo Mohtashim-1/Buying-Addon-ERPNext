@@ -592,13 +592,14 @@ function create_order_status_dashboard_html(data) {
 				<div style="overflow-x: auto;">
 					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
 						<thead>
-							<tr style="background: #f8f9fa;">
-								<th style="padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0;">Item</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Ordered</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Received</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Received %</th>
-								<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed %</th>
+								<tr style="background: #f8f9fa;">
+									<th style="padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0;">Item</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Ordered</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Received</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Balance Qty</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Received %</th>
+									<th style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">Billed %</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -615,12 +616,15 @@ function create_order_status_dashboard_html(data) {
 					<div style="font-size: 10px; color: #666;">${item.item_name}</div>
 				</td>
 				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">${item.ordered_qty}</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
-					<span style="color: #2e7d32; font-weight: bold;">${item.received_qty}</span>
-				</td>
-				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
-					<span style="color: #f57c00; font-weight: bold;">${item.billed_qty}</span>
-				</td>
+					<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+						<span style="color: #2e7d32; font-weight: bold;">${item.received_qty}</span>
+					</td>
+					<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+						<span style="color: #1976d2; font-weight: bold;">${item.pending_receipt}</span>
+					</td>
+					<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+						<span style="color: #f57c00; font-weight: bold;">${item.billed_qty}</span>
+					</td>
 				<td style="padding: 10px; text-align: center; border-bottom: 1px solid #e0e0e0;">
 					<div style="display: flex; align-items: center; justify-content: center;">
 						<div style="width: 40px; background: #e0e0e0; height: 6px; border-radius: 3px; margin-right: 5px;">
@@ -816,4 +820,3 @@ function change_supplier(frm) {
 	
 	dialog.show();
 }
-

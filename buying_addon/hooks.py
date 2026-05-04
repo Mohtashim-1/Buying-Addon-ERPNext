@@ -11,7 +11,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/buying_addon/css/buying_addon.css"
-# app_include_js = "/assets/buying_addon/js/buying_addon.js"
+app_include_js = "/assets/buying_addon/js/erpnext_grid_refresh_fix.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/buying_addon/css/buying_addon.css"
