@@ -1,5 +1,11 @@
 frappe.ui.form.on('Material Request', {
+	setup(frm) {
+		frm.trigger("setup_custom_sales_order_query");
+	},
+
 	refresh(frm) {
+		frm.trigger("setup_custom_sales_order_query");
+
 		// Only load dashboard if document is saved and not being edited
 		if (frm.doc.name && !frm.doc.__islocal && !frm.is_dirty()) {
 			// Add a small delay to ensure form is fully loaded
@@ -17,6 +23,8 @@ frappe.ui.form.on('Material Request', {
 	},
 	
 	onload(frm) {
+		frm.trigger("setup_custom_sales_order_query");
+
 		// Load dashboard data when form loads, but only for saved documents
 		if (frm.doc.name && !frm.doc.__islocal) {
 			// Add a small delay to ensure form is fully loaded
@@ -25,7 +33,44 @@ frappe.ui.form.on('Material Request', {
 			}, 100);
 		}
 	},
-	
+
+	setup_custom_sales_order_query(frm) {
+		// Hide Cancelled / Closed (Stop on SO) / On Hold from Sales Order link
+		frm.set_query("custom_sales_order", function () {
+			const filters = {
+				docstatus: 1,
+				status: ["not in", ["Cancelled", "Closed", "On Hold"]],
+			};
+			if (frm.doc.company) {
+				filters.company = frm.doc.company;
+			}
+			return { filters };
+		});
+	},
+
+	custom_sales_order(frm) {
+		// Extra procurement: push header SO onto item rows that have none
+		if (!frm.doc.custom_sales_order || frm.doc.material_request_type !== "Purchase") {
+			return;
+		}
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.sales_order) {
+				frappe.model.set_value(row.doctype, row.name, "sales_order", frm.doc.custom_sales_order);
+			}
+		});
+	},
+
+	material_request_type(frm) {
+		if (frm.doc.material_request_type === "Purchase" && !frm.doc.custom_sales_order) {
+			frm.dashboard.set_headline_alert(
+				__(
+					"For Purchase / extra procurement, set Custom Sales Order so PO tracking stays linked to the Sales Order."
+				),
+				"orange"
+			);
+		}
+	},
+
 	load_mr_status_dashboard: function(frm) {
 		// Don't load dashboard if form is dirty (has unsaved changes)
 		if (frm.is_dirty()) {

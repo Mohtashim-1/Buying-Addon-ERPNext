@@ -46,6 +46,7 @@ doctype_js = {
     # ========== OTHER DOCTYPES ==========
     "Material Request" : "buying_addon/doctype/material_request/material_request.js",
     "Sales Order" : "buying_addon/doctype/sales_order/sales_order.js",
+    "Payment Entry": "public/js/payment_entry_exchange_fix.js",
 }
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -149,9 +150,14 @@ override_doctype_class = {
 
 doc_events = {
 	"Purchase Order": {
+		"before_validate": "buying_addon.buying_addon.doctype.purchase_order.mr_to_po.restore_naming_series_on_save",
 		"before_save": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items",
 		"on_update": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items"
-	}
+	},
+	"Material Request": {
+		"before_validate": "buying_addon.buying_addon.doctype.material_request.material_request.sync_sales_order_on_material_request",
+		"before_save": "buying_addon.buying_addon.doctype.material_request.material_request.sync_sales_order_on_material_request",
+	},
 }
 
 # Scheduled Tasks
@@ -183,9 +189,10 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "buying_addon.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.stock.doctype.material_request.material_request.make_purchase_order":
+		"buying_addon.buying_addon.doctype.purchase_order.mr_to_po.make_purchase_order",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -250,4 +257,10 @@ doc_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+
+after_migrate = [
+	"buying_addon.buying_addon.setup.document_emails.ensure_document_emails",
+	"buying_addon.buying_addon.setup.child_table_perms.ensure_on_migrate",
+]
+
 

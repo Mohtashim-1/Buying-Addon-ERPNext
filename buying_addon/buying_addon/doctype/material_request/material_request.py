@@ -1,6 +1,40 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_url, flt
+
+
+def sync_sales_order_on_material_request(doc, method=None):
+	"""
+	For Purchase MRs (including extra procurement outside Production Plan):
+	- copy header custom_sales_order onto item rows missing sales_order
+	- warn when Purchase MR has no Sales Order (SO is expected for tracking)
+	"""
+	if getattr(doc, "material_request_type", None) not in ("Purchase", "Material Transfer", "Manufacture"):
+		# still apply for Purchase primarily
+		pass
+
+	if doc.material_request_type != "Purchase":
+		return
+
+	header_so = getattr(doc, "custom_sales_order", None)
+	if header_so:
+		for item in doc.items or []:
+			if not item.sales_order:
+				item.sales_order = header_so
+
+	has_item_so = any(getattr(item, "sales_order", None) for item in (doc.items or []))
+	if not header_so and not has_item_so and (doc.items or []):
+		frappe.msgprint(
+			_(
+				"No Sales Order linked on this Material Request. "
+				"Set <b>Custom Sales Order</b> (or item Sales Order) so Purchase Orders "
+				"can be tracked against the Sales Order — especially for extra procurement."
+			),
+			title=_("Sales Order Missing"),
+			indicator="orange",
+			alert=True,
+		)
 
 
 @frappe.whitelist()
