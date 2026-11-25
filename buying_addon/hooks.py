@@ -138,6 +138,7 @@ doctype_js = {
 override_doctype_class = {
     "Purchase Receipt": "buying_addon.overrides.purchase_receipt.CustomPurchaseReceipt",
     "Purchase Invoice": "buying_addon.overrides.purchase_invoice.CustomPurchaseInvoice",
+    "Material Request": "buying_addon.overrides.material_request.CustomMaterialRequest",
 }
 
 # override_doctype_class = {
@@ -153,11 +154,7 @@ doc_events = {
 		"before_validate": "buying_addon.buying_addon.doctype.purchase_order.mr_to_po.restore_naming_series_on_save",
 		"before_save": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items",
 		"on_update": "buying_addon.buying_addon.doctype.purchase_order.purchase_order.consolidate_purchase_order_items"
-	},
-	"Material Request": {
-		"before_validate": "buying_addon.buying_addon.doctype.material_request.material_request.sync_sales_order_on_material_request",
-		"before_save": "buying_addon.buying_addon.doctype.material_request.material_request.sync_sales_order_on_material_request",
-	},
+	}
 }
 
 # Scheduled Tasks

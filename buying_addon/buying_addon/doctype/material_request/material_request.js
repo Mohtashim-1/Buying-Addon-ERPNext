@@ -44,11 +44,26 @@ frappe.ui.form.on('Material Request', {
 			if (frm.doc.company) {
 				filters.company = frm.doc.company;
 			}
+			if (frm.doc.customer) {
+				filters.customer = frm.doc.customer;
+			}
 			return { filters };
 		});
 	},
 
+	customer(frm) {
+		frm.trigger("setup_custom_sales_order_query");
+	},
+
 	custom_sales_order(frm) {
+		if (frm.doc.custom_sales_order) {
+			frappe.db.get_value("Sales Order", frm.doc.custom_sales_order, "customer", (r) => {
+				if (r && r.customer && frm.doc.customer !== r.customer) {
+					frm.set_value("customer", r.customer);
+				}
+			});
+		}
+
 		// Extra procurement: push header SO onto item rows that have none
 		if (!frm.doc.custom_sales_order || frm.doc.material_request_type !== "Purchase") {
 			return;
@@ -58,17 +73,6 @@ frappe.ui.form.on('Material Request', {
 				frappe.model.set_value(row.doctype, row.name, "sales_order", frm.doc.custom_sales_order);
 			}
 		});
-	},
-
-	material_request_type(frm) {
-		if (frm.doc.material_request_type === "Purchase" && !frm.doc.custom_sales_order) {
-			frm.dashboard.set_headline_alert(
-				__(
-					"For Purchase / extra procurement, set Custom Sales Order so PO tracking stays linked to the Sales Order."
-				),
-				"orange"
-			);
-		}
 	},
 
 	load_mr_status_dashboard: function(frm) {
